@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Search Manuals - House Manuals{% endblock %}
+
+{% block content %}
+<h1>Search Manuals</h1>
+
+<div class="card">
+    <form method="GET" action="{{ url_for('search.results') }}">
+        <div class="form-group">
+            <label class="form-label">Search Query</label>
+            <input type="text" name="query" class="form-control"
+                   placeholder="Search for keywords..." autofocus>
+        </div>
+
+        <div class="filter-row">
+            <div class="form-group">
+                <label class="form-label">Brand</label>
+                <select name="brand" class="form-control">
+                    <option value="">All Brands</option>
+                    {% for brand in brands %}
+                        <option value="{{ brand }}">{{ brand }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Room</label>
+                <select name="room" class="form-control">
+                    <option value="">All Rooms</option>
+                    {% for room in rooms %}
+                        <option value="{{ room }}">{{ room }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Device Type</label>
+                <select name="device_type" class="form-control">
+                    <option value="">All Types</option>
+                    {% for type in device_types %}
+                        <option value="{{ type }}">{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+            Search
+        </button>
+    </form>
+</div>
+{% endblock %}

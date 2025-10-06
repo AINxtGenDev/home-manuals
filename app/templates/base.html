@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="House Manuals - Organize and read your household PDF manuals">
+    <title>{% block title %}House Manuals{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav-bar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="{{ url_for('manuals.list_manuals') }}" class="nav-brand">
+                    📚 House Manuals
+                </a>
+                {% if current_user.is_authenticated %}
+                <div class="nav-links">
+                    <a href="{{ url_for('manuals.list_manuals') }}" class="nav-link">Home</a>
+                    <a href="{{ url_for('search.index') }}" class="nav-link">Search</a>
+                    <a href="{{ url_for('manuals.upload') }}" class="nav-link">Upload</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link">Logout</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 House Manuals. Mobile-first manual reader.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

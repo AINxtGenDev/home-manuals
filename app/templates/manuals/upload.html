@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Manual - House Manuals{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <h1>Upload Manual</h1>
+
+    <div class="card">
+        <form method="POST" enctype="multipart/form-data" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.file.label(class="form-label") }}
+                {{ form.file(class="form-control") }}
+                <small style="color: var(--color-text-light); font-size: 0.875rem;">
+                    Maximum file size: 50MB. PDF files only.
+                </small>
+                {% if form.file.errors %}
+                    <div style="color: var(--color-danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {% for error in form.file.errors %}{{ error }}<br>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control") }}
+                {% if form.title.errors %}
+                    <div style="color: var(--color-danger); font-size: 0.875rem; margin-top: 0.25rem;">
+                        {% for error in form.title.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.brand.label(class="form-label") }}
+                {{ form.brand(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.model.label(class="form-label") }}
+                {{ form.model(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.device_type.label(class="form-label") }}
+                {{ form.device_type(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.room.label(class="form-label") }}
+                {{ form.room(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.year.label(class="form-label") }}
+                {{ form.year(class="form-control", type="number") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.tags.label(class="form-label") }}
+                {{ form.tags(class="form-control") }}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-block") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

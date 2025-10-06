@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}All Manuals - House Manuals{% endblock %}
+
+{% block content %}
+<h1>All Manuals</h1>
+
+<!-- Filters -->
+<div class="filters">
+    <form method="GET">
+        <div class="filter-row">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Brand</label>
+                <select name="brand" class="form-control">
+                    <option value="">All Brands</option>
+                    {% for brand in brands %}
+                        <option value="{{ brand }}" {% if brand == current_brand %}selected{% endif %}>
+                            {{ brand }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Room</label>
+                <select name="room" class="form-control">
+                    <option value="">All Rooms</option>
+                    {% for room in rooms %}
+                        <option value="{{ room }}" {% if room == current_room %}selected{% endif %}>
+                            {{ room }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Device Type</label>
+                <select name="device_type" class="form-control">
+                    <option value="">All Types</option>
+                    {% for type in device_types %}
+                        <option value="{{ type }}" {% if type == current_device_type %}selected{% endif %}>
+                            {{ type }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Sort By</label>
+                <select name="sort" class="form-control">
+                    <option value="uploaded_at" {% if current_sort == 'uploaded_at' %}selected{% endif %}>
+                        Newest First
+                    </option>
+                    <option value="title" {% if current_sort == 'title' %}selected{% endif %}>
+                        Title
+                    </option>
+                    <option value="brand" {% if current_sort == 'brand' %}selected{% endif %}>
+                        Brand
+                    </option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
+            Apply Filters
+        </button>
+    </form>
+</div>
+
+<!-- Manual Grid -->
+{% if manuals %}
+    <div class="manual-grid">
+        {% for manual in manuals %}
+            <div class="card">
+                <h3 class="card-title">{{ manual.title }}</h3>
+
+                <div class="card-meta">
+                    {% if manual.brand %}<strong>Brand:</strong> {{ manual.brand }}<br>{% endif %}
+                    {% if manual.model %}<strong>Model:</strong> {{ manual.model }}<br>{% endif %}
+                    {% if manual.room %}<strong>Room:</strong> {{ manual.room }}<br>{% endif %}
+                    {% if manual.device_type %}<strong>Type:</strong> {{ manual.device_type }}<br>{% endif %}
+                    {% if manual.pages %}<strong>Pages:</strong> {{ manual.pages }}<br>{% endif %}
+                    <strong>Uploaded:</strong> {{ manual.uploaded_at.strftime('%Y-%m-%d') }}
+                </div>
+
+                {% if manual.content_excerpt %}
+                    <p style="color: var(--color-text-light); font-size: 0.875rem;">
+                        {{ manual.content_excerpt[:150] }}{% if manual.content_excerpt|length > 150 %}...{% endif %}
+                    </p>
+                {% endif %}
+
+                <div class="card-actions">
+                    <a href="{{ url_for('manuals.detail', id=manual.id) }}" class="btn btn-primary">
+                        View Manual
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+        <div class="pagination">
+            {% if pagination.has_prev %}
+                <a href="{{ url_for('manuals.list_manuals', page=pagination.prev_num,
+                    brand=current_brand, room=current_room, device_type=current_device_type,
+                    sort=current_sort) }}" class="page-link">
+                    ← Previous
+                </a>
+            {% else %}
+                <span class="page-link disabled">← Previous</span>
+            {% endif %}
+
+            <span class="page-link active">
+                Page {{ pagination.page }} of {{ pagination.pages }}
+            </span>
+
+            {% if pagination.has_next %}
+                <a href="{{ url_for('manuals.list_manuals', page=pagination.next_num,
+                    brand=current_brand, room=current_room, device_type=current_device_type,
+                    sort=current_sort) }}" class="page-link">
+                    Next →
+                </a>
+            {% else %}
+                <span class="page-link disabled">Next →</span>
+            {% endif %}
+        </div>
+    {% endif %}
+{% else %}
+    <div class="card">
+        <p style="text-align: center; color: var(--color-text-light);">
+            No manuals found. <a href="{{ url_for('manuals.upload') }}">Upload your first manual</a>!
+        </p>
+    </div>
+{% endif %}
+{% endblock %}
