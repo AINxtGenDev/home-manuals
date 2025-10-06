@@ -46,13 +46,12 @@ def search_manuals(
         Tuple of (list of Manual objects, total count)
     """
     # Start with FTS5 search
+    # FTS5 doesn't have a rank column - we'll just get matching IDs
     fts_query = text(
         """
-        SELECT manuals.id, manual_index.rank
-        FROM manuals
-        JOIN manual_index ON manuals.id = manual_index.rowid
-        WHERE manual_index MATCH :query
-        ORDER BY manual_index.rank
+        SELECT rowid
+        FROM manual_index
+        WHERE content_text MATCH :query
         """
     )
 
