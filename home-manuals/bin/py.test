@@ -1,8 +1,7 @@
-#!/home/wpl/02_development/04_house_manuals/home-manuals/home-manuals/bin/python3
-# -*- coding: utf-8 -*-
-import re
+#!/home/nuc8/05_development/02_python/04_house_manuals/home-manuals/home-manuals/bin/python
 import sys
 from pytest import console_main
 if __name__ == '__main__':
-    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    if sys.argv[0].endswith('.exe'):
+        sys.argv[0] = sys.argv[0][:-4]
     sys.exit(console_main())

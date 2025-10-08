@@ -1,4 +1,4 @@
-#!/home/nuc8/05_development/02_python/04_house_manuals/home-manuals/home-manuals/bin/python
+#!/home/nuc8/05_development/02_python/04_house_manuals/home-manuals/home-manualsv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

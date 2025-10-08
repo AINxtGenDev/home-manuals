@@ -7,9 +7,22 @@ cd home-manuals
 python3 -m venv home-manuals
 source home-manuals/bin/activate
 
+python3 -m pip install --upgrade pip
+
 pip install -r requirements-dev.txt  # Development
 pip install -r requirements.txt      # Production only
 
+
+cp .env.example .env
+python - <<'PY'
+import secrets
+print("SECRET_KEY=" + secrets.token_urlsafe(32))
+PY
+
+
+flask init-db
+flask create-admin
+flask run
 
 git checkout -b feature/version-1-basic
 git add .
