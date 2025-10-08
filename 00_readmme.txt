@@ -24,6 +24,15 @@ flask init-db
 flask create-admin
 flask run
 
+
+Change your repository remote from HTTPS to SSH
+cd /home/nuc8/05_development/02_python/04_house_manuals/home-manuals
+git remote set-url origin git@github.com:AINxtGenDev/home-manuals.git
+
+git remote -v
+origin	git@github.com:AINxtGenDev/home-manuals.git (fetch)
+origin	git@github.com:AINxtGenDev/home-manuals.git (push)
+
 git checkout -b feature/version-1-basic
 git add .
 git commit -m "Add: brief description of the changes"
