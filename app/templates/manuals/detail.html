@@ -40,6 +40,9 @@
             <a href="{{ url_for('manuals.list_manuals') }}" class="btn btn-secondary">
                 ← Back to List
             </a>
+            <a href="{{ url_for('manuals.edit', id=manual.id) }}" class="btn btn-primary">
+                Edit Manual
+            </a>
         </div>
     </div>
 
@@ -57,7 +60,7 @@
 
         <div class="viewer-controls">
             <button id="zoom-out" class="btn btn-secondary">-</button>
-            <span id="zoom-level">100%</span>
+            <span id="zoom-level">200%</span>
             <button id="zoom-in" class="btn btn-secondary">+</button>
         </div>
     </div>
@@ -70,36 +73,47 @@
     // PDF.js Configuration
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
-    const url = '{{ url_for("manuals.serve_file", filename=manual.file_path.split("/")[-1]) }}';
+    const url = '{{ url_for("manuals.serve_file", filename=manual.file_path) }}';
     const manualId = {{ manual.id }};
     let pdfDoc = null;
     let pageNum = {{ current_page }};
     let pageRendering = false;
     let pageNumPending = null;
-    let scale = 1.0;
+    let scale = 2.0; // Start at 200% for optimal mobile readability
     const canvas = document.getElementById('pdf-canvas');
     const ctx = canvas.getContext('2d');
 
     // Load PDF
+    console.log('Loading PDF from URL:', url);
     pdfjsLib.getDocument(url).promise.then(pdf => {
+        console.log('PDF loaded successfully, pages:', pdf.numPages);
         pdfDoc = pdf;
         document.getElementById('page-count').textContent = pdf.numPages;
         renderPage(pageNum);
+    }).catch(error => {
+        console.error('Error loading PDF:', error);
+        alert('Error loading PDF: ' + error.message);
     });
 
     // Render page
     function renderPage(num) {
         pageRendering = true;
         pdfDoc.getPage(num).then(page => {
-            // Set canvas width to container width for mobile
             const container = document.querySelector('.canvas-container');
             const viewport = page.getViewport({ scale: 1 });
-            const containerWidth = container.clientWidth;
-            scale = containerWidth / viewport.width;
 
-            const scaledViewport = page.getViewport({ scale: scale });
+            // Use higher scale for maximum readability
+            // Scale to 3x for ultra-high-DPI rendering, then use CSS to fit container
+            const renderScale = scale * 3.0;
+            const scaledViewport = page.getViewport({ scale: renderScale });
+
+            // Set canvas dimensions at high resolution
             canvas.height = scaledViewport.height;
             canvas.width = scaledViewport.width;
+
+            // Use CSS to fit the container while maintaining quality
+            canvas.style.width = '100%';
+            canvas.style.height = 'auto';
 
             const renderContext = {
                 canvasContext: ctx,

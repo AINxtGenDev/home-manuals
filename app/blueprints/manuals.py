@@ -16,7 +16,7 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app import db
-from app.forms import ManualUploadForm
+from app.forms import ManualEditForm, ManualUploadForm
 from app.models import Manual, ReadingProgress
 from app.pdf_utils import compute_file_hash, extract_pdf_text, validate_pdf_file
 
@@ -164,7 +164,7 @@ def upload():
             room=form.room.data or None,
             year=form.year.data,
             tags=form.tags.data or None,
-            file_path=str(dest_path),
+            file_path=dest_path.name,  # Store only filename, not full path
             file_hash=file_hash,
             file_size=file_size,
             pages=num_pages,
@@ -204,17 +204,60 @@ def detail(id):
     )
 
 
+@bp.route("/<int:id>/edit", methods=["GET", "POST"])
+@login_required
+def edit(id):
+    """Edit manual metadata."""
+    manual = Manual.query.get_or_404(id)
+    form = ManualEditForm(obj=manual)
+
+    if form.validate_on_submit():
+        manual.title = form.title.data
+        manual.brand = form.brand.data or None
+        manual.model = form.model.data or None
+        manual.device_type = form.device_type.data or None
+        manual.room = form.room.data or None
+        manual.year = form.year.data
+        manual.tags = form.tags.data or None
+
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Manual updated: {manual.title} (ID: {manual.id}) by {current_user.email}"
+        )
+        flash(f'Manual "{manual.title}" updated successfully!', "success")
+        return redirect(url_for("manuals.detail", id=manual.id))
+
+    return render_template("manuals/edit.html", form=form, manual=manual)
+
+
 @bp.route("/files/<filename>")
 @login_required
 def serve_file(filename):
     """Serve a PDF file."""
-    file_path = current_app.config["STORAGE_DIR"] / filename
+    try:
+        file_path = current_app.config["STORAGE_DIR"] / filename
 
-    if not file_path.exists():
-        flash("File not found.", "danger")
+        # Resolve to absolute path
+        abs_file_path = file_path.resolve()
+
+        if not abs_file_path.exists():
+            current_app.logger.error(f"File not found: {abs_file_path}")
+            flash("File not found.", "danger")
+            return redirect(url_for("manuals.list_manuals"))
+
+        # Verify file is within storage directory (security check)
+        storage_dir = current_app.config["STORAGE_DIR"].resolve()
+        if storage_dir not in abs_file_path.parents and abs_file_path.parent != storage_dir:
+            current_app.logger.error(f"Security violation: attempted access to {abs_file_path}")
+            flash("Invalid file path.", "danger")
+            return redirect(url_for("manuals.list_manuals"))
+
+        return send_file(str(abs_file_path), mimetype="application/pdf")
+    except Exception as e:
+        current_app.logger.error(f"Error serving file {filename}: {str(e)}")
+        flash("Error loading file.", "danger")
         return redirect(url_for("manuals.list_manuals"))
-
-    return send_file(file_path, mimetype="application/pdf")
 
 
 @bp.route("/progress/<int:manual_id>", methods=["POST"])

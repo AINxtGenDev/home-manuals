@@ -67,6 +67,47 @@ class ManualUploadForm(FlaskForm):
     submit = SubmitField("Upload Manual")
 
 
+class ManualEditForm(FlaskForm):
+    """Manual edit form."""
+
+    title = StringField(
+        "Title",
+        validators=[DataRequired(), Length(min=1, max=200)],
+        render_kw={"placeholder": "e.g., Refrigerator User Manual"},
+    )
+    brand = StringField(
+        "Brand",
+        validators=[Optional(), Length(max=100)],
+        render_kw={"placeholder": "e.g., Samsung"},
+    )
+    model = StringField(
+        "Model Number",
+        validators=[Optional(), Length(max=100)],
+        render_kw={"placeholder": "e.g., RF28R7351SG"},
+    )
+    device_type = StringField(
+        "Device Type",
+        validators=[Optional(), Length(max=50)],
+        render_kw={"placeholder": "e.g., Appliance, Electronics"},
+    )
+    room = StringField(
+        "Room/Location",
+        validators=[Optional(), Length(max=50)],
+        render_kw={"placeholder": "e.g., Kitchen"},
+    )
+    year = IntegerField(
+        "Year",
+        validators=[Optional()],
+        render_kw={"placeholder": "e.g., 2023"},
+    )
+    tags = StringField(
+        "Tags",
+        validators=[Optional(), Length(max=200)],
+        render_kw={"placeholder": "Comma-separated, e.g., warranty, installation"},
+    )
+    submit = SubmitField("Update Manual")
+
+
 class SearchForm(FlaskForm):
     """Search form."""
 

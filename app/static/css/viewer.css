@@ -120,21 +120,27 @@
     background: #ffffff;
     border-radius: var(--border-radius);
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: flex-start;
-    min-height: 400px;
-    max-height: 80vh;
+    min-height: 500px;
+    max-height: 85vh;
     position: relative;
     -webkit-overflow-scrolling: touch;
+    /* Better scrolling on mobile */
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
 }
 
 #pdf-canvas {
     display: block;
-    max-width: 100%;
+    width: 100%;
     height: auto;
     user-select: none;
     -webkit-user-select: none;
     touch-action: pan-x pan-y pinch-zoom;
+    /* Better rendering quality */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 /* ===== Loading State ===== */

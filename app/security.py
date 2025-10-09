@@ -12,11 +12,12 @@ def register_security_headers(app: Flask):
         # Content Security Policy
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net blob:; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: blob:; "
             "font-src 'self' data:; "
             "connect-src 'self'; "
+            "worker-src 'self' blob:; "
             "frame-src 'none'; "
             "object-src 'none'; "
             "base-uri 'self'"
