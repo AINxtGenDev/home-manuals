@@ -1,7 +1,6 @@
 """Manuals blueprint."""
 
 import uuid
-from pathlib import Path
 
 from flask import (
     Blueprint,

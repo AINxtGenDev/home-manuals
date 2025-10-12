@@ -84,6 +84,125 @@
     const canvas = document.getElementById('pdf-canvas');
     const ctx = canvas.getContext('2d');
 
+    // ===== Enhanced Pinch-to-Zoom System =====
+
+    // Touch state management
+    const touchState = {
+        initialDistance: 0,
+        currentDistance: 0,
+        initialScale: 1.0,
+        isPanning: false,
+        panStart: { x: 0, y: 0 },
+        zoomCenter: { x: 0, y: 0 },
+        lastRenderTime: 0,
+        renderThrottle: 16, // 60fps max
+        isGesturing: false,
+        gestureType: null // 'pinch', 'pan', null
+    };
+
+    // Canvas transform state
+    const canvasTransform = {
+        scale: scale,
+        minScale: 0.5,
+        maxScale: 5.0,
+        translateX: 0,
+        translateY: 0,
+        viewportWidth: 0,
+        viewportHeight: 0,
+        canvasWidth: 0,
+        canvasHeight: 0
+    };
+
+    // RAF optimization
+    let renderRequestId = null;
+
+    function requestRender() {
+        if (renderRequestId) return;
+        renderRequestId = requestAnimationFrame(() => {
+            renderWithTransform();
+            renderRequestId = null;
+        });
+    }
+
+    function renderWithTransform() {
+        const transform = `scale(${canvasTransform.scale}) translate(${canvasTransform.translateX / canvasTransform.scale}px, ${canvasTransform.translateY / canvasTransform.scale}px)`;
+        canvas.style.transform = transform;
+        canvas.style.transformOrigin = 'top left';
+    }
+
+    function initializeTransform() {
+        const container = document.querySelector('.canvas-container');
+        canvasTransform.viewportWidth = container.clientWidth;
+        canvasTransform.viewportHeight = container.clientHeight;
+        canvasTransform.canvasWidth = canvas.offsetWidth;
+        canvasTransform.canvasHeight = canvas.offsetHeight;
+        canvasTransform.scale = scale;
+        centerCanvas();
+    }
+
+    function centerCanvas() {
+        const container = document.querySelector('.canvas-container');
+        const scaleRatio = canvasTransform.scale;
+        const scaledWidth = canvasTransform.canvasWidth * scaleRatio;
+        const scaledHeight = canvasTransform.canvasHeight * scaleRatio;
+
+        if (scaledWidth < container.clientWidth) {
+            canvasTransform.translateX = (container.clientWidth - scaledWidth) / 2;
+        } else {
+            canvasTransform.translateX = 0;
+        }
+
+        if (scaledHeight < container.clientHeight) {
+            canvasTransform.translateY = (container.clientHeight - scaledHeight) / 2;
+        } else {
+            canvasTransform.translateY = 0;
+        }
+    }
+
+    function constrainPan() {
+        const container = document.querySelector('.canvas-container');
+        const scaledWidth = canvasTransform.canvasWidth * canvasTransform.scale;
+        const scaledHeight = canvasTransform.canvasHeight * canvasTransform.scale;
+
+        // Horizontal constraints
+        if (scaledWidth <= container.clientWidth) {
+            canvasTransform.translateX = (container.clientWidth - scaledWidth) / 2;
+        } else {
+            const maxTranslateX = 0;
+            const minTranslateX = container.clientWidth - scaledWidth;
+            canvasTransform.translateX = Math.max(minTranslateX, Math.min(maxTranslateX, canvasTransform.translateX));
+        }
+
+        // Vertical constraints
+        if (scaledHeight <= container.clientHeight) {
+            canvasTransform.translateY = (container.clientHeight - scaledHeight) / 2;
+        } else {
+            const maxTranslateY = 0;
+            const minTranslateY = container.clientHeight - scaledHeight;
+            canvasTransform.translateY = Math.max(minTranslateY, Math.min(maxTranslateY, canvasTransform.translateY));
+        }
+    }
+
+    function zoomToScale(targetScale, center) {
+        const oldScale = canvasTransform.scale;
+        const newScale = Math.max(canvasTransform.minScale, Math.min(canvasTransform.maxScale, targetScale));
+
+        if (oldScale === newScale) return;
+
+        const scaleDelta = newScale / oldScale;
+
+        // Zoom toward center point
+        canvasTransform.translateX = center.x - scaleDelta * (center.x - canvasTransform.translateX);
+        canvasTransform.translateY = center.y - scaleDelta * (center.y - canvasTransform.translateY);
+
+        canvasTransform.scale = newScale;
+        constrainPan();
+        requestRender();
+
+        document.getElementById('zoom-level').textContent = Math.round(newScale * 100) + '%';
+        scale = newScale;
+    }
+
     // Load PDF
     console.log('Loading PDF from URL:', url);
     pdfjsLib.getDocument(url).promise.then(pdf => {
@@ -112,9 +231,17 @@
             canvas.height = scaledViewport.height;
             canvas.width = scaledViewport.width;
 
+            // Reset transform when rendering new page
+            canvasTransform.scale = scale;
+            canvasTransform.translateX = 0;
+            canvasTransform.translateY = 0;
+            canvasTransform.canvasWidth = canvas.width;
+            canvasTransform.canvasHeight = canvas.height;
+
             // Use CSS to fit the container while maintaining quality
             canvas.style.width = '100%';
             canvas.style.height = 'auto';
+            canvas.style.transform = 'none';
 
             const renderContext = {
                 canvasContext: ctx,
@@ -124,6 +251,10 @@
             const renderTask = page.render(renderContext);
             renderTask.promise.then(() => {
                 pageRendering = false;
+
+                // Initialize transform after render
+                setTimeout(() => initializeTransform(), 50);
+
                 if (pageNumPending !== null) {
                     renderPage(pageNumPending);
                     pageNumPending = null;
@@ -172,42 +303,195 @@
 
     // Zoom controls
     document.getElementById('zoom-in').addEventListener('click', () => {
-        scale *= 1.2;
-        renderPage(pageNum);
-        document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+        const newScale = Math.min(canvasTransform.maxScale, canvasTransform.scale * 1.2);
+        const container = document.querySelector('.canvas-container');
+        zoomToScale(newScale, {
+            x: container.clientWidth / 2,
+            y: container.clientHeight / 2
+        });
     });
 
     document.getElementById('zoom-out').addEventListener('click', () => {
-        scale *= 0.8;
-        renderPage(pageNum);
-        document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+        const newScale = Math.max(canvasTransform.minScale, canvasTransform.scale * 0.8);
+        const container = document.querySelector('.canvas-container');
+        zoomToScale(newScale, {
+            x: container.clientWidth / 2,
+            y: container.clientHeight / 2
+        });
     });
 
-    // Touch gestures for mobile
-    let touchStartDistance = 0;
+    // ===== Enhanced Touch Gestures =====
+
+    // Touch start handler
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
-            const dx = e.touches[0].pageX - e.touches[1].pageX;
-            const dy = e.touches[0].pageY - e.touches[1].pageY;
-            touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+            // Two-finger pinch gesture
+            e.preventDefault();
+
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const dx = touch1.pageX - touch2.pageX;
+            const dy = touch1.pageY - touch2.pageY;
+
+            touchState.initialDistance = Math.sqrt(dx * dx + dy * dy);
+            touchState.currentDistance = touchState.initialDistance;
+            touchState.initialScale = canvasTransform.scale;
+            touchState.isGesturing = true;
+            touchState.gestureType = 'pinch';
+
+            // Calculate zoom center (midpoint between fingers)
+            const rect = canvas.getBoundingClientRect();
+            const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
+            const centerY = (touch1.clientY + touch2.clientY) / 2 - rect.top;
+
+            touchState.zoomCenter = { x: centerX, y: centerY };
+
+            // Disable scrolling during gesture
+            document.body.style.overflow = 'hidden';
+
+        } else if (e.touches.length === 1 && canvasTransform.scale > 1.0) {
+            // Single finger pan (only when zoomed)
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            touchState.isPanning = true;
+            touchState.gestureType = 'pan';
+            touchState.panStart = {
+                x: touch.clientX - canvasTransform.translateX,
+                y: touch.clientY - canvasTransform.translateY
+            };
         }
     });
 
+    // Touch move handler
     canvas.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const dx = e.touches[0].pageX - e.touches[1].pageX;
-            const dy = e.touches[0].pageY - e.touches[1].pageY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+        if (!touchState.isGesturing && !touchState.isPanning) return;
 
-            if (touchStartDistance > 0) {
-                const ratio = distance / touchStartDistance;
-                scale *= ratio;
-                touchStartDistance = distance;
-                renderPage(pageNum);
-                document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
+        // Throttle rendering for performance
+        const now = Date.now();
+        if (now - touchState.lastRenderTime < touchState.renderThrottle) {
+            return;
+        }
+        touchState.lastRenderTime = now;
+
+        if (e.touches.length === 2 && touchState.gestureType === 'pinch') {
+            // Pinch zoom
+            e.preventDefault();
+
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const dx = touch1.pageX - touch2.pageX;
+            const dy = touch1.pageY - touch2.pageY;
+
+            touchState.currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+            if (touchState.initialDistance > 0) {
+                // Calculate zoom ratio with smoothing
+                const ratio = touchState.currentDistance / touchState.initialDistance;
+                const targetScale = touchState.initialScale * ratio;
+
+                // Apply constraints
+                const newScale = Math.max(
+                    canvasTransform.minScale,
+                    Math.min(canvasTransform.maxScale, targetScale)
+                );
+
+                // Calculate zoom with focal point preservation
+                const scaleDelta = newScale / canvasTransform.scale;
+                const centerX = touchState.zoomCenter.x;
+                const centerY = touchState.zoomCenter.y;
+
+                // Adjust pan to zoom toward focal point
+                canvasTransform.translateX = centerX - scaleDelta * (centerX - canvasTransform.translateX);
+                canvasTransform.translateY = centerY - scaleDelta * (centerY - canvasTransform.translateY);
+
+                // Update scale
+                canvasTransform.scale = newScale;
+
+                // Constrain pan within boundaries
+                constrainPan();
+
+                // Update visual
+                requestRender();
+            }
+
+        } else if (e.touches.length === 1 && touchState.isPanning) {
+            // Pan gesture
+            e.preventDefault();
+
+            const touch = e.touches[0];
+
+            // Calculate new pan position
+            canvasTransform.translateX = touch.clientX - touchState.panStart.x;
+            canvasTransform.translateY = touch.clientY - touchState.panStart.y;
+
+            // Constrain within boundaries
+            constrainPan();
+
+            // Update visual
+            requestRender();
+        }
+    });
+
+    // Touch end handler
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+            // All fingers lifted
+            touchState.isGesturing = false;
+            touchState.isPanning = false;
+            touchState.gestureType = null;
+            touchState.initialDistance = 0;
+
+            // Re-enable scrolling
+            document.body.style.overflow = '';
+
+            // Update zoom level display
+            document.getElementById('zoom-level').textContent =
+                Math.round(canvasTransform.scale * 100) + '%';
+
+            // Update global scale for button controls
+            scale = canvasTransform.scale;
+
+        } else if (e.touches.length === 1 && touchState.gestureType === 'pinch') {
+            // Transition from pinch to pan
+            touchState.isGesturing = false;
+            touchState.gestureType = 'pan';
+            touchState.isPanning = true;
+
+            const touch = e.touches[0];
+            touchState.panStart = {
+                x: touch.clientX - canvasTransform.translateX,
+                y: touch.clientY - canvasTransform.translateY
+            };
+        }
+    });
+
+    // Double-tap to zoom (optional enhancement)
+    let lastTap = 0;
+    canvas.addEventListener('touchend', (e) => {
+        const currentTime = Date.now();
+        const tapLength = currentTime - lastTap;
+
+        if (tapLength < 300 && tapLength > 0 && e.changedTouches.length === 1) {
+            // Double tap detected
+            e.preventDefault();
+
+            const touch = e.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+
+            if (canvasTransform.scale > 1.5) {
+                // Zoom out to default
+                const defaultScale = window.innerWidth < 768 ? 1.5 : 2.0;
+                zoomToScale(defaultScale, { x, y });
+            } else {
+                // Zoom in to 2.5x
+                zoomToScale(2.5, { x, y });
             }
         }
+
+        lastTap = currentTime;
     });
 </script>
 {% endblock %}

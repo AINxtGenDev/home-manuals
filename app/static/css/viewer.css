@@ -142,10 +142,10 @@
     padding: 0.5rem 1rem;
 }
 
-/* ===== Canvas Container ===== */
+/* ===== Canvas Container (Enhanced for Pinch-to-Zoom) ===== */
 .canvas-container {
     width: 100%;
-    overflow: auto;
+    overflow: hidden; /* Changed from auto to hidden for gesture control */
     background: #ffffff;
     border-radius: var(--border-radius);
     display: flex;
@@ -154,10 +154,9 @@
     min-height: 500px;
     max-height: 85vh;
     position: relative;
-    -webkit-overflow-scrolling: touch;
-    /* Better scrolling on mobile */
-    overscroll-behavior: contain;
-    scroll-behavior: smooth;
+    touch-action: none; /* Disable browser touch handling for full gesture control */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 #pdf-canvas {
@@ -166,7 +165,10 @@
     height: auto;
     user-select: none;
     -webkit-user-select: none;
-    touch-action: pan-x pan-y pinch-zoom;
+    touch-action: none; /* Critical for gesture control */
+    transform-origin: top left;
+    will-change: transform; /* Optimize for transform animations */
+    transition: none; /* Disable transition for immediate gesture feedback */
     /* Better rendering quality */
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
@@ -281,6 +283,37 @@
     border-radius: var(--border-radius);
     text-align: center;
     font-weight: 500;
+}
+
+/* ===== Touch Feedback for Better UX ===== */
+.canvas-container.zooming {
+    cursor: zoom-in;
+}
+
+.canvas-container.panning {
+    cursor: move;
+}
+
+/* Zoom limit visual indicator */
+.zoom-limit-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 100;
+}
+
+.zoom-limit-indicator.show {
+    opacity: 1;
 }
 
 /* ===== Landscape Mobile Optimization ===== */

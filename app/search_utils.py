@@ -1,7 +1,5 @@
 """Full-text search utilities using SQLite FTS5."""
 
-from typing import List, Optional, Tuple
-
 from sqlalchemy import text
 
 from app import db
@@ -26,12 +24,12 @@ def index_manual(manual_id: int, content: str):
 
 def search_manuals(
     query: str,
-    brand: Optional[str] = None,
-    room: Optional[str] = None,
-    device_type: Optional[str] = None,
+    brand: str | None = None,
+    room: str | None = None,
+    device_type: str | None = None,
     page: int = 1,
     per_page: int = 20,
-) -> Tuple[List[Manual], int]:
+) -> tuple[list[Manual], int]:
     """Search manuals using FTS5 full-text search.
 
     Args:

@@ -2,7 +2,6 @@
 
 import hashlib
 from pathlib import Path
-from typing import Tuple
 
 from pypdf import PdfReader
 
@@ -23,7 +22,7 @@ def compute_file_hash(file_path: Path) -> str:
     return sha256.hexdigest()
 
 
-def extract_pdf_text(file_path: Path) -> Tuple[int, str]:
+def extract_pdf_text(file_path: Path) -> tuple[int, str]:
     """Extract text content from a PDF file.
 
     Args:
