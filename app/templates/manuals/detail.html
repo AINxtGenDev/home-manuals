@@ -79,7 +79,8 @@
     let pageNum = {{ current_page }};
     let pageRendering = false;
     let pageNumPending = null;
-    let scale = 2.0; // Start at 200% for optimal mobile readability
+    // Adaptive scaling based on device width for optimal mobile readability
+    let scale = window.innerWidth < 768 ? 1.5 : 2.0;
     const canvas = document.getElementById('pdf-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -102,9 +103,9 @@
             const container = document.querySelector('.canvas-container');
             const viewport = page.getViewport({ scale: 1 });
 
-            // Use higher scale for maximum readability
-            // Scale to 3x for ultra-high-DPI rendering, then use CSS to fit container
-            const renderScale = scale * 3.0;
+            // Use adaptive render scale for optimal quality without performance issues
+            // Mobile: 2x, Desktop: 3x for better performance on mobile devices
+            const renderScale = scale * (window.innerWidth < 768 ? 2.0 : 3.0);
             const scaledViewport = page.getViewport({ scale: renderScale });
 
             // Set canvas dimensions at high resolution

@@ -49,9 +49,9 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1.2;
 }
 
-h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); }
-h2 { font-size: clamp(1.5rem, 4vw, 2rem); }
-h3 { font-size: clamp(1.25rem, 3vw, 1.5rem); }
+h1 { font-size: clamp(1.5rem, 4vw, 2.5rem); }
+h2 { font-size: clamp(1.35rem, 3.5vw, 2rem); }
+h3 { font-size: clamp(1.125rem, 2.5vw, 1.5rem); }
 
 p {
     margin-bottom: var(--spacing-md);
@@ -63,6 +63,13 @@ p {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 var(--spacing-md);
+}
+
+/* Mobile container - better spacing */
+@media (max-width: 480px) {
+    .container {
+        padding: 0 0.75rem;
+    }
 }
 
 /* ===== Navigation ===== */
@@ -92,19 +99,22 @@ p {
 
 .nav-links {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs);
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .nav-link {
     color: white;
     text-decoration: none;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 0.625rem 0.875rem;
     border-radius: var(--border-radius);
     min-height: 44px;
     display: inline-flex;
     align-items: center;
-    font-size: 0.9375rem;
+    justify-content: center;
+    font-size: 0.875rem;
+    white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -238,18 +248,26 @@ input[type="file"] {
     border-radius: var(--border-radius);
     padding: var(--spacing-lg);
     margin-bottom: var(--spacing-md);
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .card-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: var(--spacing-sm);
+    line-height: 1.3;
+    color: var(--color-text);
 }
 
 .card-meta {
     font-size: 0.875rem;
     color: var(--color-text-light);
     margin-bottom: var(--spacing-sm);
+    line-height: 1.6;
 }
 
 .card-actions {
@@ -276,8 +294,25 @@ input[type="file"] {
 
 .filter-row {
     display: grid;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     grid-template-columns: 1fr;
+}
+
+/* Mobile filter optimization */
+@media (max-width: 767px) {
+    .filter-row .form-group {
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .filter-row .form-label {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .filter-row .form-control {
+        font-size: 1rem;
+        padding: 0.625rem 0.75rem;
+    }
 }
 
 /* ===== Pagination ===== */

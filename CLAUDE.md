@@ -1,396 +1,352 @@
-# CLAUDE.md — House Manuals (Flask) Assistant Guide
+# Claude Code Configuration - SPARC Development Environment
 
-You are an expert **Senior Full‑Stack Developer** and **Security Engineer** assisting with the development of *House Manuals*, a Python **Flask** web application that lets the user **ingest, organize, and read household user manuals (PDFs)** with a **mobile-first, highly readable** browser UI (HTML/CSS/JS).
+## 🚨 CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT
 
-**CRITICAL**: This app will be used **primarily on mobile devices** (phones/tablets). Reading PDFs and navigating the UI must be **exceptionally readable and usable** on small screens. Prioritize mobile UX over desktop in all design decisions.
+**ABSOLUTE RULES**:
+1. ALL operations MUST be concurrent/parallel in a single message
+2. **NEVER save working files, text/mds and tests to the root folder**
+3. ALWAYS organize files in appropriate subdirectories
+4. **USE CLAUDE CODE'S TASK TOOL** for spawning agents concurrently, not just MCP
 
-Your outputs must be production‑ready, precise, and follow best practices. Provide complete code when asked to generate files, prefer small iterative PR‑sized changes, and explain the *why* behind decisions.
+### ⚡ GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"
 
----
+**MANDATORY PATTERNS:**
+- **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
+- **Task tool (Claude Code)**: ALWAYS spawn ALL agents in ONE message with full instructions
+- **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
+- **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
+- **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
 
-## Project Goals
+### 🎯 CRITICAL: Claude Code Task Tool for Agent Execution
 
-1. **Mobile-First Readability**: Large, readable fonts (min 16px base); high contrast; touch-friendly buttons (min 44px tap targets); smooth scrolling; optimized PDF rendering on small screens.
-2. **Upload & Store**: Accept PDF manuals (max 50MB); persist metadata in DB; store files on disk with UUID naming; detect duplicates via file hash.
-3. **Search & Browse**: Full‑text search (SQLite FTS5) with filters (brand, device type, room, tags); paginated results; large search input; instant results on mobile.
-4. **View & Read**: Mobile-optimized PDF viewer (PDF.js) with:
-   - Single-column layout on mobile
-   - Pinch-to-zoom support
-   - Fast page rendering
-   - Progress indicator (page X of Y)
-   - Remember last page read
-   - Landscape mode support
-5. **Extract & Index**: Parse PDFs (pypdf for text extraction) to populate FTS5 searchable index.
-6. **Secure by Default**: Single admin auth (Flask-Login), CSRF protection, input validation, safe file handling, security headers, and structured logging.
-7. **DevX**: Reproducible dev environment, linters (ruff), tests (pytest), Alembic migrations, Docker/Compose.
-
----
-
-## Tech Stack
-
-- **Backend**: Python 3.11+, Flask 3.x, Jinja2, SQLAlchemy 2.x (SQLite dev/prod with FTS5), Flask‑Login, Flask-WTF, python-dotenv.
-- **Search**: SQLite FTS5 (built-in, fast, zero dependencies).
-- **PDF**: `pypdf` for text extraction, PDF.js (frontend viewer with mobile optimizations).
-- **Frontend**:
-  - **Mobile-First CSS**: System font stack, fluid typography (clamp), CSS Grid/Flexbox, touch-optimized spacing
-  - **Viewport**: `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">`
-  - **Typography**: Min 16px base font, 1.5 line-height, high contrast (#000 on #fff)
-  - **Tap Targets**: Min 44x44px buttons/links with adequate spacing
-  - **JavaScript**: Minimal ES6 (PDF.js, reading progress, search)
-- **Build/Quality**: `ruff` (lint/format), `pytest`, Alembic (migrations).
-- **Ops**: Docker + docker‑compose, `.env` config, Gunicorn + Nginx (prod).
-
----
-
-## High-Level Architecture
-
-```
-/home-manuals              # project root
-  /app
-    __init__.py            # Flask app factory
-    /blueprints
-      auth.py              # login, logout; password hashing (Werkzeug)
-      manuals.py           # upload, list, view, detail
-      search.py            # search routes and filters
-    models.py              # SQLAlchemy models (User, Manual, ManualIndex, ReadingProgress)
-    search_utils.py        # FTS5 indexer, query helpers
-    pdf_utils.py           # safe filename, text extraction, file hash
-    forms.py               # Flask-WTF forms (upload, search, login)
-    security.py            # Security headers middleware
-    cli.py                 # Flask CLI commands (init-db, reindex, create-admin)
-    config.py              # Config classes (Dev, Prod) using python-dotenv
-  /instance                # SQLite DB + instance-specific config (gitignored)
-  /migrations              # Alembic migration scripts
-  /templates
-    base.html              # Base template with nav, footer
-    /auth
-      login.html
-    /manuals
-      list.html            # Paginated list with filters
-      detail.html          # PDF viewer + metadata
-      upload.html
-    /search
-      results.html         # Search results page
-  /static
-    /css
-      main.css             # Mobile-first styles (base 16px, fluid typography)
-      viewer.css           # PDF viewer mobile optimizations
-    /js
-      viewer.js            # PDF.js integration (pinch-zoom, page navigation)
-      progress.js          # Reading progress tracker
-    /vendor
-      pdf.js/              # PDF.js library (CDN or local)
-  /storage                 # PDF files (gitignored; configurable path)
-  /tests
-    conftest.py            # pytest fixtures
-    test_upload.py
-    test_search.py
-    test_auth.py
-  requirements.txt         # Python dependencies
-  requirements-dev.txt     # Dev dependencies (pytest, ruff, etc.)
-  .env.example             # Example environment variables
-  .env                     # Actual secrets (gitignored)
-  docker-compose.yml       # Dev environment
-  Dockerfile
-  Makefile                 # Common tasks (dev, test, lint, db)
-  pyproject.toml           # ruff config
-  .gitignore
-  README.md
+**Claude Code's Task tool is the PRIMARY way to spawn agents:**
+```javascript
+// ✅ CORRECT: Use Claude Code's Task tool for parallel agent execution
+[Single Message]:
+  Task("Research agent", "Analyze requirements and patterns...", "researcher")
+  Task("Coder agent", "Implement core features...", "coder")
+  Task("Tester agent", "Create comprehensive tests...", "tester")
+  Task("Reviewer agent", "Review code quality...", "reviewer")
+  Task("Architect agent", "Design system architecture...", "system-architect")
 ```
 
----
+**MCP tools are ONLY for coordination setup:**
+- `mcp__claude-flow__swarm_init` - Initialize coordination topology
+- `mcp__claude-flow__agent_spawn` - Define agent types for coordination
+- `mcp__claude-flow__task_orchestrate` - Orchestrate high-level workflows
 
-## Data Model
+### 📁 File Organization Rules
 
-```python
-class User(db.Model):
-    id: int (PK)
-    email: str (unique, indexed)
-    password_hash: str
-    is_admin: bool (default True for MVP single-user)
-    created_at: datetime
-    last_login: datetime (nullable)
+**NEVER save to root folder. Use these directories:**
+- `/src` - Source code files
+- `/tests` - Test files
+- `/docs` - Documentation and markdown files
+- `/config` - Configuration files
+- `/scripts` - Utility scripts
+- `/examples` - Example code
 
-class Manual(db.Model):
-    id: int (PK)
-    title: str (indexed)
-    brand: str (nullable, indexed)
-    model: str (nullable)
-    device_type: str (nullable, indexed)  # e.g., "Appliance", "Electronics"
-    room: str (nullable, indexed)         # e.g., "Kitchen", "Garage"
-    year: int (nullable)
-    tags: str (comma-separated, nullable) # e.g., "warranty,installation"
-    file_path: str (unique)               # /storage/{uuid}.pdf
-    file_hash: str (unique, SHA256)       # detect duplicates
-    file_size: int                        # bytes
-    pages: int (nullable)
-    thumbnail_path: str (nullable)        # first-page preview image
-    content_excerpt: str (nullable)       # first 500 chars for preview
-    uploaded_at: datetime
-    created_at: datetime                  # metadata created
-    updated_at: datetime
-    owner_id: int (FK → User, nullable)   # always admin for MVP
+## Project Overview
 
-class ManualIndex(db.Model):  # SQLite FTS5 virtual table
-    rowid: int (→ Manual.id)
-    content_text: str                     # full extracted text
+This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology with Claude-Flow orchestration for systematic Test-Driven Development.
 
-class ReadingProgress(db.Model):
-    id: int (PK)
-    manual_id: int (FK → Manual)
-    user_id: int (FK → User)
-    page: int (default 1)
-    updated_at: datetime
-    unique constraint on (manual_id, user_id)
+## SPARC Commands
+
+### Core Commands
+- `npx claude-flow sparc modes` - List available modes
+- `npx claude-flow sparc run <mode> "<task>"` - Execute specific mode
+- `npx claude-flow sparc tdd "<feature>"` - Run complete TDD workflow
+- `npx claude-flow sparc info <mode>` - Get mode details
+
+### Batchtools Commands
+- `npx claude-flow sparc batch <modes> "<task>"` - Parallel execution
+- `npx claude-flow sparc pipeline "<task>"` - Full pipeline processing
+- `npx claude-flow sparc concurrent <mode> "<tasks-file>"` - Multi-task processing
+
+### Build Commands
+- `npm run build` - Build project
+- `npm run test` - Run tests
+- `npm run lint` - Linting
+- `npm run typecheck` - Type checking
+
+## SPARC Workflow Phases
+
+1. **Specification** - Requirements analysis (`sparc run spec-pseudocode`)
+2. **Pseudocode** - Algorithm design (`sparc run spec-pseudocode`)
+3. **Architecture** - System design (`sparc run architect`)
+4. **Refinement** - TDD implementation (`sparc tdd`)
+5. **Completion** - Integration (`sparc run integration`)
+
+## Code Style & Best Practices
+
+- **Modular Design**: Files under 500 lines
+- **Environment Safety**: Never hardcode secrets
+- **Test-First**: Write tests before implementation
+- **Clean Architecture**: Separate concerns
+- **Documentation**: Keep updated
+
+## 🚀 Available Agents (54 Total)
+
+### Core Development
+`coder`, `reviewer`, `tester`, `planner`, `researcher`
+
+### Swarm Coordination
+`hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`
+
+### Consensus & Distributed
+`byzantine-coordinator`, `raft-manager`, `gossip-coordinator`, `consensus-builder`, `crdt-synchronizer`, `quorum-manager`, `security-manager`
+
+### Performance & Optimization
+`perf-analyzer`, `performance-benchmarker`, `task-orchestrator`, `memory-coordinator`, `smart-agent`
+
+### GitHub & Repository
+`github-modes`, `pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`, `workflow-automation`, `project-board-sync`, `repo-architect`, `multi-repo-swarm`
+
+### SPARC Methodology
+`sparc-coord`, `sparc-coder`, `specification`, `pseudocode`, `architecture`, `refinement`
+
+### Specialized Development
+`backend-dev`, `mobile-dev`, `ml-developer`, `cicd-engineer`, `api-docs`, `system-architect`, `code-analyzer`, `base-template-generator`
+
+### Testing & Validation
+`tdd-london-swarm`, `production-validator`
+
+### Migration & Planning
+`migration-planner`, `swarm-init`
+
+## 🎯 Claude Code vs MCP Tools
+
+### Claude Code Handles ALL EXECUTION:
+- **Task tool**: Spawn and run agents concurrently for actual work
+- File operations (Read, Write, Edit, MultiEdit, Glob, Grep)
+- Code generation and programming
+- Bash commands and system operations
+- Implementation work
+- Project navigation and analysis
+- TodoWrite and task management
+- Git operations
+- Package management
+- Testing and debugging
+
+### MCP Tools ONLY COORDINATE:
+- Swarm initialization (topology setup)
+- Agent type definitions (coordination patterns)
+- Task orchestration (high-level planning)
+- Memory management
+- Neural features
+- Performance tracking
+- GitHub integration
+
+**KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
+
+## 🚀 Quick Setup
+
+```bash
+# Add MCP servers (Claude Flow required, others optional)
+claude mcp add claude-flow npx claude-flow@alpha mcp start
+claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional: Enhanced coordination
+claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional: Cloud features
 ```
 
----
+## MCP Tool Categories
 
-## Security Requirements
+### Coordination
+`swarm_init`, `agent_spawn`, `task_orchestrate`
 
-- **Auth**: Flask‑Login + Werkzeug password hashing (`scrypt` or `pbkdf2:sha256`).
-- **CSRF**: Flask-WTF CSRF protection on all POST/PUT/DELETE routes.
-- **File Uploads**:
-  - Max size: 50MB (configurable).
-  - Extension whitelist: `.pdf` only.
-  - MIME type check + PDF magic bytes (`%PDF-`).
-  - UUID-based storage naming (`{uuid4}.pdf`).
-  - SHA256 hash for duplicate detection.
-- **HTTP Security Headers**:
-  - `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';`
-  - `X-Frame-Options: DENY`
-  - `X-Content-Type-Options: nosniff`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `Strict-Transport-Security: max-age=31536000; includeSubDomains` (prod only)
-- **Logging**: Structured JSON logs (uploads, logins, errors) with timestamps and user context.
-- **Secrets**: All sensitive config in `.env` (SECRET_KEY, DB URI); never committed; .env.example provided.
+### Monitoring
+`swarm_status`, `agent_list`, `agent_metrics`, `task_status`, `task_results`
 
----
+### Memory & Neural
+`memory_usage`, `neural_status`, `neural_train`, `neural_patterns`
 
-## MVP Features
+### GitHub Integration
+`github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review`
 
-1. **Admin Login** - Large, touch-friendly login form; session-based auth; logout button in nav.
-2. **Upload PDF** - Mobile-friendly form with large file picker button; metadata inputs (title, brand, model, room, tags); validate PDF; store with UUID.
-3. **List Manuals** - Mobile-optimized card layout (stacked, not table); large tap targets; show title, brand, room, uploaded date; easy thumb scrolling; sort by date/title.
-4. **View Manual** - Full-screen mobile PDF viewer with:
-   - Large page navigation buttons (prev/next)
-   - Page counter (e.g., "Page 5 of 24")
-   - Pinch-to-zoom
-   - Single-page mode (vertical scroll)
-   - Metadata collapsible panel
-   - Back button to list
-5. **Full-Text Search** - Large search input (min 44px height); filter chips/dropdowns; instant results; mobile-friendly results cards.
-6. **Reading Progress** - Auto-save last page viewed; resume with "Continue reading from page X" button.
-7. **Duplicate Detection** - Clear mobile toast notification if uploading duplicate.
-8. **Security Hardening** - CSRF tokens, security headers, input validation, structured logging.
-9. **Mobile Navigation** - Hamburger menu or bottom nav bar; clear "Home", "Search", "Upload" actions.
+### System
+`benchmark_run`, `features_detect`, `swarm_monitor`
 
----
+### Flow-Nexus MCP Tools (Optional Advanced Features)
+Flow-Nexus extends MCP capabilities with 70+ cloud-based orchestration tools:
 
-## Example Upload Handler (Sketch)
+**Key MCP Tool Categories:**
+- **Swarm & Agents**: `swarm_init`, `swarm_scale`, `agent_spawn`, `task_orchestrate`
+- **Sandboxes**: `sandbox_create`, `sandbox_execute`, `sandbox_upload` (cloud execution)
+- **Templates**: `template_list`, `template_deploy` (pre-built project templates)
+- **Neural AI**: `neural_train`, `neural_patterns`, `seraphina_chat` (AI assistant)
+- **GitHub**: `github_repo_analyze`, `github_pr_manage` (repository management)
+- **Real-time**: `execution_stream_subscribe`, `realtime_subscribe` (live monitoring)
+- **Storage**: `storage_upload`, `storage_list` (cloud file management)
 
-```python
-@bp.route('/manuals/upload', methods=['GET', 'POST'])
-@login_required
-def upload_manual():
-    form = ManualUploadForm()
-    if form.validate_on_submit():
-        f = form.file.data
+**Authentication Required:**
+- Register: `mcp__flow-nexus__user_register` or `npx flow-nexus@latest register`
+- Login: `mcp__flow-nexus__user_login` or `npx flow-nexus@latest login`
+- Access 70+ specialized MCP tools for advanced orchestration
 
-        # Validate extension
-        if not f.filename.lower().endswith('.pdf'):
-            flash('Only PDF files allowed.', 'danger')
-            return redirect(url_for('.upload_manual'))
+## 🚀 Agent Execution Flow with Claude Code
 
-        # Validate PDF magic bytes
-        header = f.read(5)
-        f.seek(0)
-        if header != b'%PDF-':
-            flash('Invalid PDF file.', 'danger')
-            return redirect(url_for('.upload_manual'))
+### The Correct Pattern:
 
-        # Check file size (50MB)
-        f.seek(0, 2)  # seek to end
-        size = f.tell()
-        f.seek(0)
-        if size > 50 * 1024 * 1024:
-            flash('File too large (max 50MB).', 'danger')
-            return redirect(url_for('.upload_manual'))
+1. **Optional**: Use MCP tools to set up coordination topology
+2. **REQUIRED**: Use Claude Code's Task tool to spawn agents that do actual work
+3. **REQUIRED**: Each agent runs hooks for coordination
+4. **REQUIRED**: Batch all operations in single messages
 
-        # Save with UUID naming
-        uid = uuid.uuid4().hex
-        dest = Path(app.config['STORAGE_DIR']) / f'{uid}.pdf'
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        f.save(dest)
+### Example Full-Stack Development:
 
-        # Hash & duplicate check
-        file_hash = compute_sha256(dest)
-        existing = Manual.query.filter_by(file_hash=file_hash).first()
-        if existing:
-            dest.unlink()  # delete duplicate
-            flash(f'This file already exists: {existing.title}', 'warning')
-            return redirect(url_for('.detail', id=existing.id))
-
-        # Extract text & metadata
-        pages, text = extract_pdf_text(dest)
-        excerpt = text[:500] if text else None
-
-        # Create Manual record
-        m = Manual(
-            title=form.title.data,
-            brand=form.brand.data,
-            model=form.model.data,
-            room=form.room.data,
-            device_type=form.device_type.data,
-            tags=form.tags.data,
-            file_path=str(dest),
-            file_hash=file_hash,
-            file_size=size,
-            pages=pages,
-            content_excerpt=excerpt,
-            owner_id=current_user.id,
-        )
-        db.session.add(m)
-        db.session.flush()
-
-        # Index for FTS5 search
-        index_manual(m.id, text)
-
-        db.session.commit()
-        flash(f'Manual "{m.title}" uploaded successfully.', 'success')
-        return redirect(url_for('.detail', id=m.id))
-
-    return render_template('manuals/upload.html', form=form)
+```javascript
+// Single message with all agent spawning via Claude Code's Task tool
+[Parallel Agent Execution]:
+  Task("Backend Developer", "Build REST API with Express. Use hooks for coordination.", "backend-dev")
+  Task("Frontend Developer", "Create React UI. Coordinate with backend via memory.", "coder")
+  Task("Database Architect", "Design PostgreSQL schema. Store schema in memory.", "code-analyzer")
+  Task("Test Engineer", "Write Jest tests. Check memory for API contracts.", "tester")
+  Task("DevOps Engineer", "Setup Docker and CI/CD. Document in memory.", "cicd-engineer")
+  Task("Security Auditor", "Review authentication. Report findings via hooks.", "reviewer")
+  
+  // All todos batched together
+  TodoWrite { todos: [...8-10 todos...] }
+  
+  // All file operations together
+  Write "backend/server.js"
+  Write "frontend/App.jsx"
+  Write "database/schema.sql"
 ```
 
+## 📋 Agent Coordination Protocol
+
+### Every Agent Spawned via Task Tool MUST:
+
+**1️⃣ BEFORE Work:**
+```bash
+npx claude-flow@alpha hooks pre-task --description "[task]"
+npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
+```
+
+**2️⃣ DURING Work:**
+```bash
+npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
+npx claude-flow@alpha hooks notify --message "[what was done]"
+```
+
+**3️⃣ AFTER Work:**
+```bash
+npx claude-flow@alpha hooks post-task --task-id "[task]"
+npx claude-flow@alpha hooks session-end --export-metrics true
+```
+
+## 🎯 Concurrent Execution Examples
+
+### ✅ CORRECT WORKFLOW: MCP Coordinates, Claude Code Executes
+
+```javascript
+// Step 1: MCP tools set up coordination (optional, for complex tasks)
+[Single Message - Coordination Setup]:
+  mcp__claude-flow__swarm_init { topology: "mesh", maxAgents: 6 }
+  mcp__claude-flow__agent_spawn { type: "researcher" }
+  mcp__claude-flow__agent_spawn { type: "coder" }
+  mcp__claude-flow__agent_spawn { type: "tester" }
+
+// Step 2: Claude Code Task tool spawns ACTUAL agents that do the work
+[Single Message - Parallel Agent Execution]:
+  // Claude Code's Task tool spawns real agents concurrently
+  Task("Research agent", "Analyze API requirements and best practices. Check memory for prior decisions.", "researcher")
+  Task("Coder agent", "Implement REST endpoints with authentication. Coordinate via hooks.", "coder")
+  Task("Database agent", "Design and implement database schema. Store decisions in memory.", "code-analyzer")
+  Task("Tester agent", "Create comprehensive test suite with 90% coverage.", "tester")
+  Task("Reviewer agent", "Review code quality and security. Document findings.", "reviewer")
+  
+  // Batch ALL todos in ONE call
+  TodoWrite { todos: [
+    {id: "1", content: "Research API patterns", status: "in_progress", priority: "high"},
+    {id: "2", content: "Design database schema", status: "in_progress", priority: "high"},
+    {id: "3", content: "Implement authentication", status: "pending", priority: "high"},
+    {id: "4", content: "Build REST endpoints", status: "pending", priority: "high"},
+    {id: "5", content: "Write unit tests", status: "pending", priority: "medium"},
+    {id: "6", content: "Integration tests", status: "pending", priority: "medium"},
+    {id: "7", content: "API documentation", status: "pending", priority: "low"},
+    {id: "8", content: "Performance optimization", status: "pending", priority: "low"}
+  ]}
+  
+  // Parallel file operations
+  Bash "mkdir -p app/{src,tests,docs,config}"
+  Write "app/package.json"
+  Write "app/src/server.js"
+  Write "app/tests/server.test.js"
+  Write "app/docs/API.md"
+```
+
+### ❌ WRONG (Multiple Messages):
+```javascript
+Message 1: mcp__claude-flow__swarm_init
+Message 2: Task("agent 1")
+Message 3: TodoWrite { todos: [single todo] }
+Message 4: Write "file.js"
+// This breaks parallel coordination!
+```
+
+## Performance Benefits
+
+- **84.8% SWE-Bench solve rate**
+- **32.3% token reduction**
+- **2.8-4.4x speed improvement**
+- **27+ neural models**
+
+## Hooks Integration
+
+### Pre-Operation
+- Auto-assign agents by file type
+- Validate commands for safety
+- Prepare resources automatically
+- Optimize topology by complexity
+- Cache searches
+
+### Post-Operation
+- Auto-format code
+- Train neural patterns
+- Update memory
+- Analyze performance
+- Track token usage
+
+### Session Management
+- Generate summaries
+- Persist state
+- Track metrics
+- Restore context
+- Export workflows
+
+## Advanced Features (v2.0.0)
+
+- 🚀 Automatic Topology Selection
+- ⚡ Parallel Execution (2.8-4.4x speed)
+- 🧠 Neural Training
+- 📊 Bottleneck Analysis
+- 🤖 Smart Auto-Spawning
+- 🛡️ Self-Healing Workflows
+- 💾 Cross-Session Memory
+- 🔗 GitHub Integration
+
+## Integration Tips
+
+1. Start with basic swarm init
+2. Scale agents gradually
+3. Use memory for context
+4. Monitor progress regularly
+5. Train patterns from success
+6. Enable hooks automation
+7. Use GitHub tools first
+
+## Support
+
+- Documentation: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues
+- Flow-Nexus Platform: https://flow-nexus.ruv.io (registration required for cloud features)
+
 ---
 
-## Routes (Summary)
+Remember: **Claude Flow coordinates, Claude Code creates!**
 
-**Auth Blueprint** (`/auth`)
-- `GET  /login` → login form
-- `POST /login` → authenticate user
-- `GET  /logout` → logout + redirect to login
-
-**Manuals Blueprint** (`/manuals`)
-- `GET  /` → redirect to `/manuals/list`
-- `GET  /list` → paginated list (query params: page, sort, brand, room)
-- `GET  /upload` → upload form
-- `POST /upload` → process upload + validation
-- `GET  /<id>` → detail view with PDF viewer
-- `GET  /files/<uuid>.pdf` → serve PDF (login required, send_file)
-
-**Search Blueprint** (`/search`)
-- `GET /` → search page with filters
-- `GET /results` → FTS5 query results (query params: q, brand, room, device_type)
-
-**API Blueprint** (`/api`) - optional AJAX endpoints
-- `POST /progress` → update reading progress (JSON: {manual_id, page})
-
----
-
-## Development Workflow
-
-- **Branching**: `feature/<short-name>` from `main`
-- **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, etc.)
-- **Local Dev**: `make dev` (Flask dev server with auto-reload)
-- **Database**: `make db` (Alembic migrations), `flask create-admin` (CLI command)
-- **Quality**: `make lint` (ruff), `make test` (pytest with coverage)
-- **Docker**: `docker-compose up` for isolated dev environment
-- **CI**: GitHub Actions on push (lint, test, build Docker image)
-
----
-
-## Development Phases
-
-### Phase 1: Foundation (Days 1-2)
-1. Project structure + .gitignore + requirements.txt
-2. Flask app factory (`app/__init__.py`)
-3. Config classes (Dev/Prod) with python-dotenv
-4. SQLAlchemy models (User, Manual, ManualIndex, ReadingProgress)
-5. Alembic setup + initial migration
-6. Makefile with `dev`, `test`, `lint`, `db` targets
-
-### Phase 2: Auth & Core Upload (Days 3-4)
-1. Auth blueprint (login/logout) + Flask-Login setup
-2. `flask create-admin` CLI command
-3. Manuals blueprint scaffolding
-4. Upload form (Flask-WTF) + validation
-5. PDF utils (text extraction with pypdf, SHA256 hash)
-6. File storage + duplicate detection
-7. FTS5 indexing helper
-
-### Phase 3: Views & Search (Days 5-6)
-1. Base template (nav, flash messages, footer)
-2. Manuals list (paginated, sortable)
-3. Manual detail page (metadata display)
-4. PDF.js viewer integration
-5. Search blueprint + FTS5 query logic
-6. Search results page with filters
-
-### Phase 4: Mobile UX & Progress (Day 7)
-1. Reading progress tracking (AJAX endpoint)
-2. Mobile-optimized PDF.js viewer:
-   - Single-page scroll mode
-   - Touch gesture support (pinch-zoom, swipe)
-   - Large prev/next buttons (44px min)
-   - Page progress indicator
-3. Mobile CSS refinements:
-   - Card-based list layout (not tables)
-   - Bottom navigation or hamburger menu
-   - Touch-friendly forms (large inputs, spacing)
-   - System font stack for performance
-4. Flash messages/toasts (mobile-friendly positioning)
-5. Responsive breakpoints (mobile-first: 320px → 768px → 1024px)
-
-### Phase 5: Security & Polish (Days 8-9)
-1. Security headers middleware
-2. CSRF verification on all forms
-3. Structured logging (JSON)
-4. Error pages (404, 500)
-5. Input sanitization review
-6. Tests (upload, search, auth flows)
-
-### Phase 6: Deploy Prep (Day 10)
-1. Docker + docker-compose (dev + prod)
-2. Gunicorn + Nginx config
-3. .env.example documentation
-4. README with setup instructions
-5. CI/CD pipeline (GitHub Actions)
-
----
-
-## Mobile UX Requirements (Checklist)
-
-- ✅ **Viewport meta tag** with proper scaling limits
-- ✅ **Base font size** ≥16px (prevents iOS zoom on input focus)
-- ✅ **Line height** ≥1.5 for readability
-- ✅ **Tap targets** ≥44x44px (WCAG AAA standard)
-- ✅ **Touch spacing** ≥8px between interactive elements
-- ✅ **High contrast** text (4.5:1 minimum for body text)
-- ✅ **System fonts** for fast rendering (no web font delays)
-- ✅ **Card layout** on mobile (not tables)
-- ✅ **PDF viewer** supports pinch-zoom and single-page scroll
-- ✅ **Large buttons** for page navigation (prev/next)
-- ✅ **Bottom or hamburger nav** for easy thumb access
-- ✅ **Loading indicators** for slow network (PDF download)
-- ✅ **Landscape mode** tested and functional
-- ✅ **Tested on real devices**: iPhone, Android phone, iPad
-
----
-
-## Definition of Done
-
-- ✅ All MVP features implemented
-- ✅ **Mobile UX checklist** 100% complete
-- ✅ **Tested on 3+ real mobile devices** (iOS + Android)
-- ✅ Tests pass (`pytest` with >80% coverage)
-- ✅ Lint passes (`ruff check --fix`)
-- ✅ Security headers verified
-- ✅ README + .env.example complete
-- ✅ Docker build succeeds
-- ✅ Can create admin, upload PDF, search, view, track progress **on mobile**
-
----
-
-*End of CLAUDE.md*
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+Never save working files, text/mds and tests to the root folder.
